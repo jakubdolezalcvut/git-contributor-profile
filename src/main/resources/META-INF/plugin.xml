@@ -1,15 +1,17 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <id>com.github.jakubdolezalcvut.gitcontributorprofile</id>
+    <id>cz.dolezal.gitcontributorprofile</id>
     <name>GitContributorProfile</name>
     <vendor>jakubdolezalcvut</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>intellij.platform.vcs.log</depends>
+    <depends>intellij.platform.vcs.log.graph</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.jakubdolezalcvut.gitcontributorprofile.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-        <postStartupActivity implementation="com.github.jakubdolezalcvut.gitcontributorprofile.startup.MyProjectActivity" />
+        <toolWindow factoryClass="cz.dolezal.gitcontributorprofile.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
+        <postStartupActivity implementation="cz.dolezal.gitcontributorprofile.startup.MyProjectActivity" />
     </extensions>
 </idea-plugin>

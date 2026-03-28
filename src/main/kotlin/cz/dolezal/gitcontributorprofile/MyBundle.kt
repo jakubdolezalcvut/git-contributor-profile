@@ -1,4 +1,4 @@
-package com.github.jakubdolezalcvut.gitcontributorprofile
+package cz.dolezal.gitcontributorprofile
 
 import com.intellij.DynamicBundle
 import org.jetbrains.annotations.NonNls

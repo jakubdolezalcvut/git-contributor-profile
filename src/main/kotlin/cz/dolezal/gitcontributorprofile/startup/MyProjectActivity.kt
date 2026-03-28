@@ -1,4 +1,4 @@
-package com.github.jakubdolezalcvut.gitcontributorprofile.startup
+package cz.dolezal.gitcontributorprofile.startup
 
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
