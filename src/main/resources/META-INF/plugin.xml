@@ -5,13 +5,12 @@
     <vendor>jakubdolezalcvut</vendor>
 
     <depends>com.intellij.modules.platform</depends>
-    <depends>intellij.platform.vcs.log</depends>
-    <depends>intellij.platform.vcs.log.graph</depends>
+    <depends>com.intellij.modules.vcs</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="cz.dolezal.gitcontributorprofile.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-        <postStartupActivity implementation="cz.dolezal.gitcontributorprofile.startup.MyProjectActivity" />
+        <toolWindow factoryClass="cz.dolezal.gitcontributorprofile.toolWindow.ContributorProfileWindowFactory" id="ContributorProfileToolWindow"/>
+        <postStartupActivity implementation="cz.dolezal.gitcontributorprofile.startup.ContributorProfileActivity" />
     </extensions>
 </idea-plugin>

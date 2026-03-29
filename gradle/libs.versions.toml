@@ -6,7 +6,6 @@ opentest4j = "1.3.0"
 # plugins
 changelog = "2.5.0"
 intelliJPlatform = "2.11.0"
-intelliJLib = "253.31033.145"
 kotlin = "2.3.0"
 kover = "0.9.5"
 qodana = "2025.3.1"
@@ -14,7 +13,6 @@ qodana = "2025.3.1"
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 opentest4j = { group = "org.opentest4j", name = "opentest4j", version.ref = "opentest4j" }
-vcsLog = { group = "com.jetbrains.intellij.platform", name = "vcs-log-impl", version.ref = "intelliJLib" }
 
 [plugins]
 changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }
