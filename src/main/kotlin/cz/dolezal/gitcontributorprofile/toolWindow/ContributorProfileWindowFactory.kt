@@ -8,12 +8,13 @@ import com.intellij.ui.content.ContentFactory
 class ContributorProfileWindowFactory : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val contributorProfileToolWindow = ContributorProfileToolWindow(toolWindow)
-
+        val contributorProfileToolWindow = ContributorProfileToolWindow(toolWindow).apply {
+            load()
+        }
         val content = ContentFactory.getInstance()
             .createContent(contributorProfileToolWindow.content, null, false)
 
-        contributorProfileToolWindow.load()
+        content.setDisposer(contributorProfileToolWindow)
         toolWindow.contentManager.addContent(content)
     }
 

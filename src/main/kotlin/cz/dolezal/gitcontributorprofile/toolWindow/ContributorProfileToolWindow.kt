@@ -1,5 +1,6 @@
 package cz.dolezal.gitcontributorprofile.toolWindow
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.service
 import com.intellij.openapi.wm.ToolWindow
@@ -12,11 +13,15 @@ import cz.dolezal.gitcontributorprofile.services.ImmutableContributionStats
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import java.awt.Component
 import javax.swing.SwingConstants
 
-internal class ContributorProfileToolWindow(toolWindow: ToolWindow) {
+internal class ContributorProfileToolWindow(
+    toolWindow: ToolWindow,
+) : Disposable {
 
     private val service = toolWindow.project.service<ContributorProfileService>()
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.EDT)
@@ -35,36 +40,37 @@ internal class ContributorProfileToolWindow(toolWindow: ToolWindow) {
             .launchIn(uiScope)
     }
 
+    override fun dispose() {
+        uiScope.cancel("ToolWindow disposed")
+    }
+
     fun load() {
         service.load()
     }
 
     private fun showLoading() {
         setContent {
-            val label = JBLabel(
+            JBLabel(
                 "Crunching commits...",
                 AnimatedIcon.Default(),
                 SwingConstants.LEFT,
             )
-            add(label)
         }
     }
 
     private fun showError() {
         setContent {
-            val label = JBLabel(
+            JBLabel(
                 "Loading commits failed!",
             )
-            add(label)
         }
     }
 
     private fun showEmpty() {
         setContent {
-            val label = JBLabel(
+            JBLabel(
                 "No commits found",
             )
-            add(label)
         }
     }
 
@@ -76,7 +82,8 @@ internal class ContributorProfileToolWindow(toolWindow: ToolWindow) {
         }
     }
 
-    private fun setContent(block: JBPanel<JBPanel<*>>.() -> Unit) {
-        block(content)
+    private fun setContent(block: () -> Component) {
+        content.removeAll()
+        content.add(block())
     }
 }
