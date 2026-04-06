@@ -16,6 +16,7 @@ opentest4j = { group = "org.opentest4j", name = "opentest4j", version.ref = "ope
 
 [plugins]
 changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 intelliJPlatform = { id = "org.jetbrains.intellij.platform", version.ref = "intelliJPlatform" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
