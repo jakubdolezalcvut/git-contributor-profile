@@ -6,5 +6,5 @@ internal class MutableContributionStats(
     var removedFiles: Int = 0,
     var movedFiles: Int = 0,
     var modifiedFiles: Int = 0,
-    val languages: MutableMap<LanguageType, Int> = mutableMapOf(),
+    val languages: MutableMap<String, Int> = mutableMapOf(),
 )

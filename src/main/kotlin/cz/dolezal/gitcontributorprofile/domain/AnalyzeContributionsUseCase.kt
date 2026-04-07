@@ -1,47 +1,71 @@
 package cz.dolezal.gitcontributorprofile.domain
 
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ContentRevision
 import com.intellij.util.concurrency.annotations.RequiresBackgroundThread
 import com.intellij.vcs.log.VcsUser
 import com.intellij.vcs.log.data.AbstractDataGetter.Companion.getCommitDetails
 import com.intellij.vcs.log.data.VcsLogData
+import com.intellij.vcs.log.graph.GraphCommit
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
-import kotlin.collections.forEach
 
 internal class AnalyzeContributionsUseCase(
     private val logger: Logger,
 ) {
+    private companion object {
+        const val MAX_COMMITS = 1000
+        const val BATCH_SIZE = 100
+    }
+    private val fileTypeManager = FileTypeManager.getInstance()
+
     @RequiresBackgroundThread
     operator fun invoke(
         dataManager: VcsLogData,
         maxCommits: Int,
     ): ImmutableMap<Author, ImmutableContributionStats> {
         val contributions = mutableMapOf<Author, MutableContributionStats>()
-        var commitIndex = 0
 
-        dataManager.storage.iterateCommits { commitId ->
-            if (dataManager.isDisposed) return@iterateCommits false
-            val commitDetails = dataManager.commitDetailsGetter.getCommitDetails(commitId.hash, commitId.root)
-            val author = commitDetails.author.toAuthor()
+        val chunks = dataManager.dataPack.permanentGraph.allCommits
+            .take(MAX_COMMITS)
+            .chunked(BATCH_SIZE)
 
-            val stats = contributions[author] ?: MutableContributionStats()
-            updateStats(commitDetails.changes, stats)
-            contributions[author] = stats
-
-            commitIndex++
-            commitIndex < maxCommits
+        chunks.forEach { chunk ->
+            if (dataManager.isDisposed) return@forEach
+            analyzeChunk(
+                chunk = chunk,
+                contributions = contributions,
+                dataManager = dataManager,
+            )
         }
+        // Loaded stats aren't reliable -> return empty
         return if (dataManager.isDisposed) {
             persistentMapOf()
         } else {
             contributions.mapValues { (_, mutableStats) -> mutableStats.toImmutable() }
                 .toImmutableMap()
+        }
+    }
+
+    private fun analyzeChunk(
+        chunk: List<GraphCommit<Int>>,
+        contributions: MutableMap<Author, MutableContributionStats>,
+        dataManager: VcsLogData,
+    ) {
+        val commitIndexes = chunk.map { shorageIndex -> shorageIndex.id }
+        val commitDetails = dataManager.commitDetailsGetter.getCommitDetails(commitIndexes)
+
+        commitDetails.forEach { commitDetails ->
+            if (dataManager.isDisposed) return@forEach
+            val author = commitDetails.author.toAuthor()
+            val stats = contributions[author] ?: MutableContributionStats()
+            updateStats(commitDetails.changes, stats)
+            contributions[author] = stats
         }
     }
 
@@ -105,14 +129,10 @@ internal class AnalyzeContributionsUseCase(
         revision: ContentRevision,
         stats: MutableContributionStats,
     ) {
-        val fileName = revision.file.name.lowercase()
-
-        val languageType = LanguageType.entries.find { language ->
-            fileName.endsWith(language.suffix)
-        } ?: return
-
-        val languageCount = stats.languages[languageType] ?: 0
-        stats.languages[languageType] = languageCount + 1
+        val fileType = fileTypeManager.getFileTypeByFileName(revision.file.name)
+        val language = fileType.name
+        val languageCount = stats.languages[language] ?: 0
+        stats.languages[language] = languageCount + 1
     }
 
     private fun VcsUser.toAuthor() = Author(
@@ -129,21 +149,13 @@ internal class AnalyzeContributionsUseCase(
         languages = languages.toImmutableMap(),
     )
 
-    private fun Map<LanguageType, Int>.toImmutableMap(): ImmutableList<LanguageStat> =
-        map { (languageType, count) ->
+    private fun Map<String, Int>.toImmutableMap(): ImmutableList<LanguageStat> =
+        map { (language, count) ->
             LanguageStat(
                 count = count,
-                name = languageType.getName(),
+                name = language,
             )
         }
             .sortedByDescending { stat -> stat.count }
             .toImmutableList()
-
-    private fun LanguageType.getName(): String =
-        when (this) {
-            LanguageType.HTML -> "HTML"
-            LanguageType.JAVA -> "Java"
-            LanguageType.KOTLIN -> "Kotlin"
-            LanguageType.XML -> "XML"
-        }
 }
