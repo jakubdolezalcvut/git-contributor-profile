@@ -22,7 +22,7 @@ internal class AnalyzeContributionsUseCase(
         dataManager: VcsLogData,
         maxCommits: Int,
     ): ImmutableMap<Author, ImmutableContributionStats> {
-        val contributions = createInitialContributions(dataManager.allUsers)
+        val contributions = mutableMapOf<Author, MutableContributionStats>()
         var commitIndex = 0
 
         dataManager.storage.iterateCommits { commitId ->
@@ -30,11 +30,10 @@ internal class AnalyzeContributionsUseCase(
             val commitDetails = dataManager.commitDetailsGetter.getCommitDetails(commitId.hash, commitId.root)
             val author = commitDetails.author.toAuthor()
 
-            contributions[author]?.let { stats ->
-                stats.commits++
-                updateFileStats(commitDetails.changes, stats)
-                updateLanguageStats(commitDetails.changes, stats)
-            }
+            val stats = contributions[author] ?: MutableContributionStats()
+            updateStats(commitDetails.changes, stats)
+            contributions[author] = stats
+
             commitIndex++
             commitIndex < maxCommits
         }
@@ -46,16 +45,13 @@ internal class AnalyzeContributionsUseCase(
         }
     }
 
-    private fun createInitialContributions(
-        vcsUsers: Set<VcsUser>,
-    ): Map<Author, MutableContributionStats> {
-        val authors = vcsUsers.map { vcsUser ->
-            vcsUser.toAuthor()
-        }
-        return authors.fold(mutableMapOf()) { map, author ->
-            map[author] = MutableContributionStats()
-            map
-        }
+    private fun updateStats(
+        changes: Collection<Change>,
+        stats: MutableContributionStats,
+    ) {
+        stats.commits++
+        updateFileStats(changes, stats)
+        updateLanguageStats(changes, stats)
     }
 
     private fun updateFileStats(
