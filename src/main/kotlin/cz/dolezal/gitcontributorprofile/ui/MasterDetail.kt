@@ -1,6 +1,5 @@
 package cz.dolezal.gitcontributorprofile.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -8,7 +7,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -17,23 +15,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cz.dolezal.gitcontributorprofile.domain.Author
 import cz.dolezal.gitcontributorprofile.domain.ImmutableContributionStats
-import cz.dolezal.gitcontributorprofile.domain.LanguageStat
 import cz.dolezal.gitcontributorprofile.ui.controls.Prompt
-import io.github.koalaplot.core.pie.BezierLabelConnector
-import io.github.koalaplot.core.pie.CircularLabelPositionProvider
-import io.github.koalaplot.core.pie.DefaultSlice
-import io.github.koalaplot.core.pie.PieChart
-import io.github.koalaplot.core.pie.PieLabelPlacement
-import io.github.koalaplot.core.pie.PieSliceScope
-import io.github.koalaplot.core.util.ExperimentalKoalaPlotApi
-import io.github.koalaplot.core.util.generateHueColorPalette
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import org.jetbrains.jewel.foundation.lazy.SelectableLazyColumn
@@ -74,9 +60,7 @@ internal fun MasterDetail(
             if (stats == null) {
                 EmptyDetail()
             } else {
-                Detail(
-                    stats = stats,
-                )
+                Detail(stats)
             }
         },
         state = splitLayoutState,
@@ -181,7 +165,6 @@ private fun Detail(
         DetailRow(label = "Modified", value = stats.modifiedFiles)
 
         if (stats.languages.isNotEmpty()) {
-            GroupHeader(text = "Languages")
             LanguageChart(stats.languages)
         }
     }
@@ -212,74 +195,4 @@ private fun DetailRow(
             color = JewelTheme.globalColors.text.normal,
         )
     }
-}
-
-@OptIn(ExperimentalKoalaPlotApi::class)
-@Composable
-private fun LanguageChart(
-    languages: ImmutableList<LanguageStat>,
-) {
-    val values = remember(languages) { languages.map { language -> language.count.toFloat() } }
-    val colors = remember(languages) { generateHueColorPalette(languages.size) }
-
-    PieChart(
-        modifier = Modifier.size(300.dp),
-        values = values,
-        labelPositionProvider = CircularLabelPositionProvider(
-            labelSpacing = 1.1f,
-            labelPlacement = PieLabelPlacement.External,
-        ),
-        slice = { index ->
-            LanguageSlice(
-                color = colors[index],
-                language = languages[index],
-            )
-        },
-        label = { index ->
-            InfoText(
-                text = languages[index].name,
-                maxLines = 1,
-                style = JewelTheme.typography.medium,
-                color = JewelTheme.globalColors.text.normal,
-            )
-        },
-        labelConnector = { index ->
-            BezierLabelConnector(
-                connectorColor = colors[index],
-            )
-        },
-        holeSize = 0.7f,
-        holeContent = { },
-        maxPieDiameter = Dp.Infinity,
-        forceCenteredPie = false,
-    )
-}
-
-@OptIn(ExperimentalKoalaPlotApi::class)
-@Composable
-private fun PieSliceScope.LanguageSlice(
-    color: Color,
-    language: LanguageStat,
-) {
-    val hoverText = remember(language) {
-        if (language.count == 1) "${language.count} file" else "${language.count} files"
-    }
-    DefaultSlice(
-        color = color,
-        border = BorderStroke(
-            width = 6.dp,
-            color = lerp(color, Color.White, 0.2f),
-        ),
-        hoverExpandFactor = 1.05f,
-        hoverElement = {
-            InfoText(
-                text = hoverText,
-                maxLines = 1,
-                style = JewelTheme.typography.medium,
-                color = JewelTheme.globalColors.text.normal,
-            )
-        },
-        antiAlias = true,
-        gap = 0f,
-    )
 }
