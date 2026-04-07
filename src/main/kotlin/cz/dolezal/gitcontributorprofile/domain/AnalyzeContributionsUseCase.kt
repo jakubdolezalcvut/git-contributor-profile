@@ -22,6 +22,11 @@ internal class AnalyzeContributionsUseCase(
         const val MAX_COMMITS = 1000
         const val BATCH_SIZE = 100
     }
+
+    @JvmInline
+    private value class Email(
+        val value: String,
+    )
     private val fileTypeManager = FileTypeManager.getInstance()
 
     @RequiresBackgroundThread
@@ -29,7 +34,7 @@ internal class AnalyzeContributionsUseCase(
         dataManager: VcsLogData,
         maxCommits: Int,
     ): ImmutableMap<Author, ImmutableContributionStats> {
-        val contributions = mutableMapOf<Author, MutableContributionStats>()
+        val contributions = mutableMapOf<Email, MutableContributionStats>()
 
         val chunks = dataManager.dataPack.permanentGraph.allCommits
             .take(MAX_COMMITS)
@@ -47,14 +52,17 @@ internal class AnalyzeContributionsUseCase(
         return if (dataManager.isDisposed) {
             persistentMapOf()
         } else {
-            contributions.mapValues { (_, mutableStats) -> mutableStats.toImmutable() }
+            contributions.map { (_, mutableStats) ->
+                mutableStats.author to mutableStats.toImmutable()
+            }
+                .toMap()
                 .toImmutableMap()
         }
     }
 
     private fun analyzeChunk(
         chunk: List<GraphCommit<Int>>,
-        contributions: MutableMap<Author, MutableContributionStats>,
+        contributions: MutableMap<Email, MutableContributionStats>,
         dataManager: VcsLogData,
     ) {
         val commitIndexes = chunk.map { shorageIndex -> shorageIndex.id }
@@ -63,9 +71,11 @@ internal class AnalyzeContributionsUseCase(
         commitDetails.forEach { commitDetails ->
             if (dataManager.isDisposed) return@forEach
             val author = commitDetails.author.toAuthor()
-            val stats = contributions[author] ?: MutableContributionStats()
+            val email = Email(author.email)
+
+            val stats = contributions[email] ?: MutableContributionStats(author)
             updateStats(commitDetails.changes, stats)
-            contributions[author] = stats
+            contributions[email] = stats
         }
     }
 
