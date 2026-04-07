@@ -41,7 +41,7 @@ internal fun MasterDetail(
     contributions: ImmutableMap<Author, ImmutableContributionStats>,
 ) {
     val splitLayoutState = rememberSplitLayoutState(
-        initialSplitFraction = 0.3f,
+        initialSplitFraction = 0.4f,
     )
     var selectedDetail by remember {
         mutableStateOf<ImmutableContributionStats?>(null)

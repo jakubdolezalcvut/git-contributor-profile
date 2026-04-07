@@ -88,6 +88,7 @@ internal class ContributorProfileService(
     private var loadRequestsJob: Job? = null
 
     private val analyzeContributionsUseCase = AnalyzeContributionsUseCase(thisLogger())
+    private val validateDataManagerUseCase = ValidateDataManagerUseCase(thisLogger())
 
     private val loadRequests: MutableSharedFlow<LoadRequest> = MutableSharedFlow(
         // LoadRequest can wait till startCollectingLoadRequests is called after VcsLogManager is created
@@ -122,6 +123,9 @@ internal class ContributorProfileService(
 
         // Not using distinctUntilChanged since newer request may load different commits
         loadRequestsJob = loadRequests.mapLatest { request ->
+            if (!validateDataManagerUseCase(dataManager)) {
+                return@mapLatest null
+            }
             lastMaxCommits = request.maxCommits
             _uiState.value = UiState.Loading
             _uiState.value = loadContributorStats(dataManager, request.maxCommits)

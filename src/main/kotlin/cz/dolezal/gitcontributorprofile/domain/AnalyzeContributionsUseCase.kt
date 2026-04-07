@@ -18,11 +18,6 @@ import kotlinx.collections.immutable.toImmutableMap
 internal class AnalyzeContributionsUseCase(
     private val logger: Logger,
 ) {
-    private companion object {
-        const val MAX_COMMITS = 1000
-        const val BATCH_SIZE = 100
-    }
-
     @JvmInline
     private value class Email(
         val value: String,
@@ -37,8 +32,8 @@ internal class AnalyzeContributionsUseCase(
         val contributions = mutableMapOf<Email, MutableContributionStats>()
 
         val chunks = dataManager.dataPack.permanentGraph.allCommits
-            .take(MAX_COMMITS)
-            .chunked(BATCH_SIZE)
+            .take(AnalysisConfig.MAX_COMMITS)
+            .chunked(AnalysisConfig.BATCH_SIZE)
 
         chunks.forEach { chunk ->
             if (dataManager.isDisposed) return@forEach
@@ -50,6 +45,7 @@ internal class AnalyzeContributionsUseCase(
         }
         // Loaded stats aren't reliable -> return empty
         return if (dataManager.isDisposed) {
+            logger.info("Disposing contribution stats")
             persistentMapOf()
         } else {
             contributions.map { (_, mutableStats) ->
