@@ -1,4 +1,4 @@
-package cz.dolezal.gitcontributorprofile.services
+package cz.dolezal.gitcontributorprofile.domain
 
 internal class MutableContributionStats(
     var commits: Int = 0,
@@ -6,5 +6,5 @@ internal class MutableContributionStats(
     var removedFiles: Int = 0,
     var movedFiles: Int = 0,
     var modifiedFiles: Int = 0,
-    val languages: MutableMap<Language, Int> = mutableMapOf(),
+    val languages: MutableMap<LanguageType, Int> = mutableMapOf(),
 )

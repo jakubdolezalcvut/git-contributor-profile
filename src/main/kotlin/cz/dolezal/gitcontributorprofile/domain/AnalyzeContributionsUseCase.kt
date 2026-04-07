@@ -1,18 +1,22 @@
-package cz.dolezal.gitcontributorprofile.services
+package cz.dolezal.gitcontributorprofile.domain
 
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ContentRevision
 import com.intellij.util.concurrency.annotations.RequiresBackgroundThread
 import com.intellij.vcs.log.VcsUser
 import com.intellij.vcs.log.data.AbstractDataGetter.Companion.getCommitDetails
 import com.intellij.vcs.log.data.VcsLogData
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlin.collections.forEach
 
-internal class CommitAnalyzer {
-
+internal class AnalyzeContributionsUseCase(
+    private val logger: Logger,
+) {
     @RequiresBackgroundThread
     operator fun invoke(
         dataManager: VcsLogData,
@@ -107,12 +111,12 @@ internal class CommitAnalyzer {
     ) {
         val fileName = revision.file.name.lowercase()
 
-        val language = Language.entries.find { language ->
+        val languageType = LanguageType.entries.find { language ->
             fileName.endsWith(language.suffix)
         } ?: return
 
-        val languageCount = stats.languages[language] ?: 0
-        stats.languages[language] = languageCount + 1
+        val languageCount = stats.languages[languageType] ?: 0
+        stats.languages[languageType] = languageCount + 1
     }
 
     private fun VcsUser.toAuthor() = Author(
@@ -120,13 +124,30 @@ internal class CommitAnalyzer {
         email = email,
     )
 
-    private fun MutableContributionStats.toImmutable() =
-        ImmutableContributionStats(
-            commits = commits,
-            addedFiles = addedFiles,
-            removedFiles = removedFiles,
-            movedFiles = movedFiles,
-            modifiedFiles = modifiedFiles,
-            languages = languages.toImmutableMap(),
-        )
+    private fun MutableContributionStats.toImmutable() = ImmutableContributionStats(
+        commits = commits,
+        addedFiles = addedFiles,
+        removedFiles = removedFiles,
+        movedFiles = movedFiles,
+        modifiedFiles = modifiedFiles,
+        languages = languages.toImmutableMap(),
+    )
+
+    private fun Map<LanguageType, Int>.toImmutableMap(): ImmutableList<LanguageStat> =
+        map { (languageType, count) ->
+            LanguageStat(
+                count = count,
+                name = languageType.getName(),
+            )
+        }
+            .sortedByDescending { stat -> stat.count }
+            .toImmutableList()
+
+    private fun LanguageType.getName(): String =
+        when (this) {
+            LanguageType.HTML -> "HTML"
+            LanguageType.JAVA -> "Java"
+            LanguageType.KOTLIN -> "Kotlin"
+            LanguageType.XML -> "XML"
+        }
 }

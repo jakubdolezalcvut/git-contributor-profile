@@ -1,10 +1,10 @@
-package cz.dolezal.gitcontributorprofile.toolWindow
+package cz.dolezal.gitcontributorprofile.ui
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ui.components.JBPanel
-import cz.dolezal.gitcontributorprofile.services.ContributorProfileService
+import cz.dolezal.gitcontributorprofile.domain.ContributorProfileService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

@@ -1,4 +1,4 @@
-package cz.dolezal.gitcontributorprofile.toolWindow.controls
+package cz.dolezal.gitcontributorprofile.ui.controls
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

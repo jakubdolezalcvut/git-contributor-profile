@@ -11,7 +11,7 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="cz.dolezal.gitcontributorprofile.toolWindow.ContributorProfileWindowFactory" id="ContributorProfileToolWindow"/>
+        <toolWindow factoryClass="cz.dolezal.gitcontributorprofile.ui.ContributorProfileWindowFactory" id="ContributorProfileToolWindow"/>
         <postStartupActivity implementation="cz.dolezal.gitcontributorprofile.startup.ContributorProfileActivity" />
     </extensions>
 </idea-plugin>

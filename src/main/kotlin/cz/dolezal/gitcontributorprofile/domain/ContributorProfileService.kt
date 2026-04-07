@@ -1,4 +1,4 @@
-package cz.dolezal.gitcontributorprofile.services
+package cz.dolezal.gitcontributorprofile.domain
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
@@ -74,7 +74,7 @@ internal class ContributorProfileService(
         override fun logCreated(manager: VcsLogManager) {
             thisLogger().info("VcsLogManager created")
             storedDataManager = manager.dataManager
-            storedDataManager?.addDataPackChangeListener(vcsListener)
+            manager.dataManager.addDataPackChangeListener(vcsListener)
             startCollectingLoadRequests(manager.dataManager)
         }
         override fun logDisposed(manager: VcsLogManager) {
@@ -87,7 +87,7 @@ internal class ContributorProfileService(
     private var storedDataManager: VcsLogData? = null
     private var loadRequestsJob: Job? = null
 
-    private val commitAnalyzer = CommitAnalyzer()
+    private val analyzeContributionsUseCase = AnalyzeContributionsUseCase(thisLogger())
 
     private val loadRequests: MutableSharedFlow<LoadRequest> = MutableSharedFlow(
         // LoadRequest can wait till startCollectingLoadRequests is called after VcsLogManager is created
@@ -141,7 +141,7 @@ internal class ContributorProfileService(
         maxCommits: Int,
     ): UiState =
         try {
-            val stats = commitAnalyzer(dataManager, maxCommits)
+            val stats = analyzeContributionsUseCase(dataManager, maxCommits)
             when {
                 stats.isEmpty() -> UiState.Empty
                 else -> UiState.Success(

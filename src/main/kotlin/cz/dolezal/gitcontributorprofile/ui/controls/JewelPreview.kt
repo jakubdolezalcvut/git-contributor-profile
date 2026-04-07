@@ -1,4 +1,4 @@
-package cz.dolezal.gitcontributorprofile.toolWindow.controls
+package cz.dolezal.gitcontributorprofile.ui.controls
 
 import androidx.compose.runtime.Composable
 import org.jetbrains.jewel.bridge.theme.SwingBridgeTheme

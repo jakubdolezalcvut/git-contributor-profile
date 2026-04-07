@@ -31,6 +31,15 @@ repositories {
 
 // Dependencies are managed with Gradle version catalog - read more: https://docs.gradle.org/current/userguide/version_catalogs.html
 dependencies {
+    implementation(libs.koalaplot) {
+        exclude(group = "org.jetbrains.compose.animation")
+        exclude(group = "org.jetbrains.compose.foundation")
+        exclude(group = "org.jetbrains.compose.material")
+        exclude(group = "org.jetbrains.compose.material3")
+        exclude(group = "org.jetbrains.compose.runtime")
+        exclude(group = "org.jetbrains.compose.ui")
+        exclude(group = "org.jetbrains.kotlinx")
+    }
     testImplementation(libs.junit)
     testImplementation(libs.opentest4j)
 

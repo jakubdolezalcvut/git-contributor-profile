@@ -1,4 +1,4 @@
-package cz.dolezal.gitcontributorprofile.services
+package cz.dolezal.gitcontributorprofile.domain
 
 import androidx.compose.runtime.Immutable
 
