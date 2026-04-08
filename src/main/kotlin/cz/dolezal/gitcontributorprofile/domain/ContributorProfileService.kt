@@ -15,6 +15,7 @@ import com.intellij.vcs.log.impl.VcsProjectLog
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,27 +41,24 @@ internal class ContributorProfileService(
         fun getInstance(project: Project): ContributorProfileService = project.service()
     }
 
-    private object Defaults {
-        const val MAX_COMMITS = 100
-    }
-
     // region Types
 
     sealed interface UiState {
 
         data object Loading : UiState
-        data object Empty : UiState
+        data class Empty(val lastDays: LastDays) : UiState
         data object Error : UiState
 
         data class Success(
             val authors: ImmutableList<Author>,
             val contributions: ImmutableMap<Author, ImmutableContributionStats>,
+            val lastDays: LastDays,
             val totalAuthors: Int,
         ) : UiState
     }
 
     private data class LoadRequest(
-        val maxCommits: Int,
+        val lastDays: LastDays,
     )
 
     // endregion Types
@@ -68,7 +66,7 @@ internal class ContributorProfileService(
     // region properties
 
     private val vcsListener = DataPackChangeListener {
-        loadRequests.tryEmit(LoadRequest(lastMaxCommits))
+        loadRequests.tryEmit(LoadRequest(previousLastDays))
     }
     private val managerListener = object : VcsProjectLog.ProjectLogListener {
         override fun logCreated(manager: VcsLogManager) {
@@ -83,12 +81,12 @@ internal class ContributorProfileService(
             stopCollectingLoadRequests()
         }
     }
-    private var lastMaxCommits: Int = Defaults.MAX_COMMITS
+    private var previousLastDays: LastDays = AnalysisConfig.Days.DEFAULT
     private var storedDataManager: VcsLogData? = null
     private var loadRequestsJob: Job? = null
 
-    private val analyzeContributionsUseCase = AnalyzeContributionsUseCase(thisLogger())
-    private val validateDataManagerUseCase = ValidateDataManagerUseCase(thisLogger())
+    private val analyzeContributionsUseCase = AnalyzeContributionsUseCase(thisLogger(), project)
+    private val filterCommitsUseCase = FilterCommitsUseCase(thisLogger())
 
     private val loadRequests: MutableSharedFlow<LoadRequest> = MutableSharedFlow(
         // LoadRequest can wait till startCollectingLoadRequests is called after VcsLogManager is created
@@ -114,8 +112,13 @@ internal class ContributorProfileService(
         stopCollectingLoadRequests() // Actually not needed because of structured concurrency but feels better this way
     }
 
-    fun load(maxCommits: Int = Defaults.MAX_COMMITS) {
-        loadRequests.tryEmit(LoadRequest(maxCommits))
+    fun load(
+        lastDays: LastDays = AnalysisConfig.Days.DEFAULT,
+    ) {
+        if ((lastDays == previousLastDays) && (uiState.value is UiState.Success)) {
+            return
+        }
+        loadRequests.tryEmit(LoadRequest(lastDays))
     }
 
     private fun startCollectingLoadRequests(dataManager: VcsLogData) {
@@ -123,12 +126,17 @@ internal class ContributorProfileService(
 
         // Not using distinctUntilChanged since newer request may load different commits
         loadRequestsJob = loadRequests.mapLatest { request ->
-            if (!validateDataManagerUseCase(dataManager)) {
-                return@mapLatest null
-            }
-            lastMaxCommits = request.maxCommits
+            val filteredCommits = filterCommitsUseCase(
+                dataManager = dataManager,
+                lastDays = request.lastDays,
+                wasSuccessful = uiState.value is UiState.Success,
+            )
+                ?: return@mapLatest null
+
+            previousLastDays = request.lastDays
+            // Maybe some soft loading UI should be displayed instead to prevent flickering
             _uiState.value = UiState.Loading
-            _uiState.value = loadContributorStats(dataManager, request.maxCommits)
+            _uiState.value = loadContributorStats(dataManager, filteredCommits)
         }
             // Because low-level IO logic is in Java, hence blocking, see VcsLogStorageImpl
             .flowOn(Dispatchers.IO)
@@ -140,20 +148,32 @@ internal class ContributorProfileService(
     }
 
     @RequiresBackgroundThread
-    private fun loadContributorStats(
+    private suspend fun loadContributorStats(
         dataManager: VcsLogData,
-        maxCommits: Int,
+        filteredCommits: FilteredCommits,
     ): UiState =
         try {
-            val stats = analyzeContributionsUseCase(dataManager, maxCommits)
+            val stats = analyzeContributionsUseCase(dataManager, filteredCommits)
             when {
-                stats.isEmpty() -> UiState.Empty
-                else -> UiState.Success(
-                    authors = stats.toSortedAuthors(),
-                    contributions = stats,
-                    totalAuthors = dataManager.allUsers.size,
-                )
+                stats.isEmpty() -> {
+                    UiState.Empty(
+                        lastDays = previousLastDays,
+                    )
+                }
+                else -> {
+                    UiState.Success(
+                        authors = stats.toSortedAuthors(),
+                        contributions = stats,
+                        lastDays = previousLastDays,
+                        totalAuthors = dataManager.allUsers.size,
+                    )
+                }
             }
+        } catch (exception: CancellationException) {
+            _uiState.value = UiState.Empty(
+                lastDays = previousLastDays,
+            )
+            throw exception
         } catch (vcsException: VcsException) {
             thisLogger().error(vcsException)
             showError(vcsException)

@@ -2,8 +2,11 @@ package cz.dolezal.gitcontributorprofile.domain
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileTypes.FileTypeManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ContentRevision
+import com.intellij.platform.ide.progress.withBackgroundProgress
+import com.intellij.platform.util.progress.reportProgressScope
 import com.intellij.util.concurrency.annotations.RequiresBackgroundThread
 import com.intellij.vcs.log.VcsUser
 import com.intellij.vcs.log.data.AbstractDataGetter.Companion.getCommitDetails
@@ -17,6 +20,7 @@ import kotlinx.collections.immutable.toImmutableMap
 
 internal class AnalyzeContributionsUseCase(
     private val logger: Logger,
+    private val project: Project,
 ) {
     @JvmInline
     private value class Email(
@@ -25,36 +29,35 @@ internal class AnalyzeContributionsUseCase(
     private val fileTypeManager = FileTypeManager.getInstance()
 
     @RequiresBackgroundThread
-    operator fun invoke(
+    suspend operator fun invoke(
         dataManager: VcsLogData,
-        maxCommits: Int,
-    ): ImmutableMap<Author, ImmutableContributionStats> {
-        val contributions = mutableMapOf<Email, MutableContributionStats>()
+        filteredCommits: FilteredCommits,
+    ): ImmutableMap<Author, ImmutableContributionStats> =
+        withBackgroundProgress(project = project, title = "Contribution Profile", cancellable = true) {
+            val contributions = mutableMapOf<Email, MutableContributionStats>()
+            val chunks = filteredCommits.commits.chunked(AnalysisConfig.Commits.BATCH)
 
-        val chunks = dataManager.dataPack.permanentGraph.allCommits
-            .take(AnalysisConfig.MAX_COMMITS)
-            .chunked(AnalysisConfig.BATCH_SIZE)
+            reportProgressScope(chunks.size) { progressReporter ->
+                chunks.forEach { chunk ->
+                    if (dataManager.isDisposed) return@forEach
 
-        chunks.forEach { chunk ->
-            if (dataManager.isDisposed) return@forEach
-            analyzeChunk(
-                chunk = chunk,
-                contributions = contributions,
-                dataManager = dataManager,
-            )
-        }
-        // Loaded stats aren't reliable -> return empty
-        return if (dataManager.isDisposed) {
-            logger.info("Disposing contribution stats")
-            persistentMapOf()
-        } else {
-            contributions.map { (_, mutableStats) ->
-                mutableStats.author to mutableStats.toImmutable()
+                    progressReporter.itemStep {
+                        analyzeChunk(chunk, contributions, dataManager)
+                    }
+                }
             }
-                .toMap()
-                .toImmutableMap()
+            // Loaded stats aren't reliable -> return empty
+            if (dataManager.isDisposed) {
+                logger.info("Disposing contribution stats")
+                persistentMapOf()
+            } else {
+                contributions.map { (_, mutableStats) ->
+                    mutableStats.author to mutableStats.toImmutable()
+                }
+                    .toMap()
+                    .toImmutableMap()
+            }
         }
-    }
 
     private fun analyzeChunk(
         chunk: List<GraphCommit<Int>>,
