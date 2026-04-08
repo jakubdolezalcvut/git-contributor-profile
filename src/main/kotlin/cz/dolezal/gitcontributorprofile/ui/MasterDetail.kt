@@ -128,6 +128,7 @@ private fun AuthorItem(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(bottom = 2.dp)
             .then(background)
             .padding(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -153,7 +154,7 @@ private fun Detail(
 ) {
     Column(
         modifier = Modifier.padding(start = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         GroupHeader(text = "Commits")
         DetailRow(label = "Commits", value = stats.commits)
