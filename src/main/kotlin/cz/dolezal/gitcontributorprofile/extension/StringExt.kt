@@ -1,4 +1,6 @@
-package cz.dolezal.gitcontributorprofile.domain
+package cz.dolezal.gitcontributorprofile.extension
+
+import cz.dolezal.gitcontributorprofile.domain.LastDays
 
 internal fun String.parseToLastDays(): LastDays? =
     try {

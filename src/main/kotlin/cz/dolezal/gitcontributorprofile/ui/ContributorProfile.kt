@@ -19,7 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import cz.dolezal.gitcontributorprofile.domain.ContributorProfileService
 import cz.dolezal.gitcontributorprofile.domain.LastDays
-import cz.dolezal.gitcontributorprofile.domain.parseToLastDays
+import cz.dolezal.gitcontributorprofile.extension.parseToLastDays
 import cz.dolezal.gitcontributorprofile.ui.controls.JewelPreview
 import cz.dolezal.gitcontributorprofile.ui.controls.Prompt
 import kotlinx.collections.immutable.ImmutableList

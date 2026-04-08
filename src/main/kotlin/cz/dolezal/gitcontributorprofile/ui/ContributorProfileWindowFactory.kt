@@ -9,13 +9,8 @@ class ContributorProfileWindowFactory : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val contentFactory = ContentFactory.getInstance()
-
-        val profileToolWindow = ContributorProfileToolWindow(toolWindow).apply {
-            load()
-        }
-        val content = contentFactory.createContent(profileToolWindow.content, null, false).apply {
-            setDisposer(profileToolWindow)
-        }
+        val profileToolWindow = ContributorProfileToolWindow(toolWindow)
+        val content = contentFactory.createContent(profileToolWindow.content, null, false)
         toolWindow.contentManager.addContent(content)
     }
 
